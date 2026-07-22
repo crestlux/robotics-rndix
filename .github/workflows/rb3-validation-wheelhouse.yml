@@ -9,57 +9,38 @@ permissions:
   contents: read
 
 jobs:
-  wheelhouse:
+  strap-source:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Download validation packages
+      - name: Archive pinned public STRAP source
         run: |
           set -euxo pipefail
-          python3 -m pip install --upgrade pip
-          mkdir -p wheelhouse
-          curl --fail --location --retry 3 \
-            --output wheelhouse/mujoco-3.3.7-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl \
-            https://files.pythonhosted.org/packages/e7/a9/2633ce0a5d11d884fcc8420279d58888d41a0bd08002efe14d334394e26e/mujoco-3.3.7-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
-          python3 -m pip download --no-deps --dest wheelhouse \
-            robosuite==1.4.0 \
-            robomimic==0.3.0 \
-            absl-py \
-            etils \
-            glfw \
-            PyOpenGL \
-            termcolor \
-            tqdm \
-            psutil \
-            tensorboard \
-            tensorboardX \
-            tianshou \
-            imageio \
-            imageio-ffmpeg \
-            matplotlib \
-            cloudpickle \
-            future \
-            easydict \
-            einops \
-            thop \
-            diffusers \
-            hydra-core \
-            wandb
+          git clone https://github.com/WEIRDLabUW/robomimic_strap.git public-strap
+          cd public-strap
+          git checkout 3386adb5b664e9bedf88e7d26ced986439e67193
+          git rev-parse HEAD > PINNED_COMMIT.txt
+          rm -rf .git
+          cd ..
           python3 - <<'PY'
           import hashlib, json
           from pathlib import Path
-          out = {}
-          for path in sorted(Path('wheelhouse').glob('*')):
-              out[path.name] = {
+          root = Path('public-strap')
+          files = {}
+          for path in sorted(p for p in root.rglob('*') if p.is_file()):
+              rel = path.relative_to(root).as_posix()
+              files[rel] = {
                   'size': path.stat().st_size,
                   'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
               }
-          Path('wheelhouse/manifest.json').write_text(json.dumps(out, indent=2, sort_keys=True) + '\n')
+          (root / 'SOURCE_MANIFEST.json').write_text(
+              json.dumps(files, indent=2, sort_keys=True) + '\n'
+          )
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: rb3-validation-wheelhouse-py313
-          path: wheelhouse
+          name: public-robomimic-strap-3386adb
+          path: public-strap
           retention-days: 2
           if-no-files-found: error
