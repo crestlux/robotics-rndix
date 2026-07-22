@@ -14,16 +14,15 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-          cache: pip
       - name: Download validation wheels
         run: |
-          python -m pip install --upgrade pip
+          set -euxo pipefail
+          python3 -m pip install --upgrade pip
           mkdir -p wheelhouse
-          python -m pip download --only-binary=:all: --no-deps --dest wheelhouse \
-            mujoco==3.3.7 \
+          curl --fail --location --retry 3 \
+            --output wheelhouse/mujoco-3.3.7-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl \
+            https://files.pythonhosted.org/packages/e7/a9/2633ce0a5d11d884fcc8420279d58888d41a0bd08002efe14d334394e26e/mujoco-3.3.7-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+          python3 -m pip download --only-binary=:all: --no-deps --dest wheelhouse \
             robosuite==1.4.0 \
             robomimic==0.3.0 \
             absl-py \
@@ -39,7 +38,6 @@ jobs:
             imageio \
             imageio-ffmpeg \
             matplotlib \
-            gym==0.25.2 \
             cloudpickle \
             future \
             easydict \
@@ -48,7 +46,7 @@ jobs:
             diffusers \
             hydra-core \
             wandb
-          python - <<'PY'
+          python3 - <<'PY'
           import hashlib, json
           from pathlib import Path
           out = {}
