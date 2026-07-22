@@ -9,38 +9,34 @@ permissions:
   contents: read
 
 jobs:
-  strap-source:
+  strap-deps:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Archive pinned public STRAP source
+      - name: Download pinned STRAP transformer dependencies
         run: |
           set -euxo pipefail
-          git clone https://github.com/WEIRDLabUW/robomimic_strap.git public-strap
-          cd public-strap
-          git checkout 3386adb5b664e9bedf88e7d26ced986439e67193
-          git rev-parse HEAD > PINNED_COMMIT.txt
-          rm -rf .git
-          cd ..
+          mkdir -p strap-deps
+          python3 -m pip download --only-binary=:all: --dest strap-deps \
+            transformers==4.48.1
           python3 - <<'PY'
           import hashlib, json
           from pathlib import Path
-          root = Path('public-strap')
+          root = Path('strap-deps')
           files = {}
-          for path in sorted(p for p in root.rglob('*') if p.is_file()):
-              rel = path.relative_to(root).as_posix()
-              files[rel] = {
+          for path in sorted(p for p in root.iterdir() if p.is_file()):
+              files[path.name] = {
                   'size': path.stat().st_size,
                   'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
               }
-          (root / 'SOURCE_MANIFEST.json').write_text(
+          (root / 'manifest.json').write_text(
               json.dumps(files, indent=2, sort_keys=True) + '\n'
           )
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: public-robomimic-strap-3386adb
-          path: public-strap
+          name: public-strap-transformers-4.48.1
+          path: strap-deps
           retention-days: 2
           if-no-files-found: error
