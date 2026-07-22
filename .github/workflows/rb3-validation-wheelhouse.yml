@@ -1,0 +1,42 @@
+name: rb3-validation-wheelhouse
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  strap-deps:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download pinned STRAP transformer dependencies
+        run: |
+          set -euxo pipefail
+          mkdir -p strap-deps
+          python3 -m pip download --only-binary=:all: --dest strap-deps \
+            transformers==4.48.1
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          root = Path('strap-deps')
+          files = {}
+          for path in sorted(p for p in root.iterdir() if p.is_file()):
+              files[path.name] = {
+                  'size': path.stat().st_size,
+                  'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+              }
+          (root / 'manifest.json').write_text(
+              json.dumps(files, indent=2, sort_keys=True) + '\n'
+          )
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: public-strap-transformers-4.48.1
+          path: strap-deps
+          retention-days: 2
+          if-no-files-found: error
