@@ -14,7 +14,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Download validation wheels
+      - name: Download validation packages
         run: |
           set -euxo pipefail
           python3 -m pip install --upgrade pip
@@ -22,7 +22,7 @@ jobs:
           curl --fail --location --retry 3 \
             --output wheelhouse/mujoco-3.3.7-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl \
             https://files.pythonhosted.org/packages/e7/a9/2633ce0a5d11d884fcc8420279d58888d41a0bd08002efe14d334394e26e/mujoco-3.3.7-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
-          python3 -m pip download --only-binary=:all: --no-deps --dest wheelhouse \
+          python3 -m pip download --no-deps --dest wheelhouse \
             robosuite==1.4.0 \
             robomimic==0.3.0 \
             absl-py \
